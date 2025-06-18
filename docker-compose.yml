@@ -1,0 +1,11 @@
+# docker-compose.yml
+version: '3'
+services:
+  app:
+    container_name: myapp-web           # Name of the container
+    build: .                            # Build image from the Dockerfile in this directory
+    ports:
+      - "3000:3000"                     # Map container's port 3000 to server's port 3000
+    env_file: 
+      - .env                            # Use environment variables from .env file (will be set to staging or production via deployment script)
+    restart: unless-stopped
