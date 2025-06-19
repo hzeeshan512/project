@@ -1,17 +1,21 @@
-# Dockerfile
-FROM node:18-alpine          # Use an official Node.js runtime image (alpine for small size)
+# Use latest Node.js LTS on Alpine Linux
+FROM node:lts-alpine
+
+# Set working directory
 WORKDIR /app
 
-# Install dependencies (copy package.json first for caching)
+# Copy and install only production dependencies
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Copy application source code
+# Copy the rest of the application code
 COPY . .
 
-# Specify port (optional, mainly for documentation)
+# Set environment variable (optional, but good practice)
 ENV PORT=3000
+
+# Expose the port your app runs on
 EXPOSE 3000
 
-# Start the app
+# Run the application
 CMD ["npm", "start"]
