@@ -26,10 +26,10 @@ jobs:
       - name: Deploy via SSH
         uses: easingthemes/ssh-deploy@v2.1.5
         env:
-          SSH_PRIVATE_KEY: ${{ secrets_SSH_KEY }}       # private key for SSH, added in GitHub secrets
-          REMOTE_HOST: ${{ secrets_SERVER_HOST }}       # server IP or hostname
-          REMOTE_USER: ${{ secrets_SERVER_USER }}       # SSH username (e.g., "ubuntu")
-          REMOTE_PORT: ${{ secrets_SERVER_PORT }} # SSH port (22 by default)
+          SSH_PRIVATE_KEY: ${{ Secrets_SSH_KEY }}       # private key for SSH, added in GitHub secrets
+          REMOTE_HOST: ${{ Secrets_SERVER_HOST }}       # server IP or hostname
+          REMOTE_USER: ${{ Secrets_SERVER_USER }}       # SSH username (e.g., "ubuntu")
+          REMOTE_PORT: ${{ Secrets_SERVER_PORT }} # SSH port (22 by default)
           # Only deploy the necessary files (exclude node_modules, etc.)
           SOURCE: "."                                   # source is the whole repository (after checkout)
           EXCLUDE: ".git/,node_modules/"
