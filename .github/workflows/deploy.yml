@@ -1,0 +1,46 @@
+# .github/workflows/deploy.yml
+name: CD - Deploy to Server (Staging & Production)
+
+on:
+  push:
+    branches:
+      - "main"
+      - "develop"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # Only proceed if the CI job on this commit succeeded (optional but recommended)
+    # needs: [ build-and-test ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Determine environment
+        id: envdetermine
+        run: |
+          if [ "${GITHUB_REF##*/}" = "main" ]; then echo "env=production" >> $GITHUB_OUTPUT; else echo "env=staging" >> $GITHUB_OUTPUT; fi
+
+      - name: Deploy via SSH
+        uses: easingthemes/ssh-deploy@v2.1.5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}       # private key for SSH, added in GitHub secrets
+          REMOTE_HOST: ${{ secrets.SERVER_HOST }}       # server IP or hostname
+          REMOTE_USER: ${{ secrets.SERVER_USER }}       # SSH username (e.g., "ubuntu")
+          REMOTE_PORT: ${{ secrets.SERVER_PORT || 22 }} # SSH port (22 by default)
+          # Only deploy the necessary files (exclude node_modules, etc.)
+          SOURCE: "."                                   # source is the whole repository (after checkout)
+          EXCLUDE: ".git/,node_modules/"
+          TARGET: "/home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/"  # target dir on server (separate for staging/prod)
+          SCRIPT_AFTER: |
+            # On the server: navigate to project directory and deploy with Docker
+            cd /home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/
+            # Use the appropriate env file for Docker Compose
+            if [ "${{ steps.envdetermine.outputs.env }}" = "production" ]; then 
+              cp .env.production .env; 
+            else 
+              cp .env.staging .env; 
+            fi
+            docker-compose up -d --build   # build and run the container
