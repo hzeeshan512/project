@@ -1,4 +1,3 @@
-# .github/workflows/deploy.yml
 name: CD - Deploy to Server (Staging & Production)
 
 on:
@@ -11,9 +10,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # Only proceed if the CI job on this commit succeeded (optional but recommended)
-    # needs: [ build-and-test ]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -21,26 +17,39 @@ jobs:
       - name: Determine environment
         id: envdetermine
         run: |
-          if [ "${GITHUB_REF##*/}" = "main" ]; then echo "env=production" >> $GITHUB_OUTPUT; else echo "env=staging" >> $GITHUB_OUTPUT; fi
+          if [ "${GITHUB_REF##*/}" = "main" ]; then 
+            echo "env=production" >> $GITHUB_OUTPUT
+          else 
+            echo "env=staging" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Deploy via SSH
-        uses: easingthemes/ssh-deploy@v2.1.5
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy via rsync with password
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.HOST_KEY }}       # private key for SSH, added in GitHub secrets
-          REMOTE_HOST: ${{ secrets.HOST_IP }}       # server IP or hostname
-          REMOTE_USER: ${{ secrets.HOST_USER }}       # SSH username (e.g., "ubuntu")
-          REMOTE_PORT: ${{ secrets.HOST_PORT }} # SSH port (22 by default)
-          # Only deploy the necessary files (exclude node_modules, etc.)
-          SOURCE: "."                                   # source is the whole repository (after checkout)
-          EXCLUDE: ".git/,node_modules/"
-          TARGET: "/home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/"  # target dir on server (separate for staging/prod)
-          SCRIPT_AFTER: |
-            # On the server: navigate to project directory and deploy with Docker
+          HOST_PASS: ${{ secrets.HOST_PASS }}
+          HOST_IP: ${{ secrets.HOST_IP }}
+          HOST_USER: ${{ secrets.HOST_USER }}
+          HOST_PORT: ${{ secrets.HOST_PORT }}
+        run: |
+          sshpass -p "$HOST_PASS" rsync -avz -e "ssh -o StrictHostKeyChecking=no -p $HOST_PORT" \
+            --exclude ".git/" --exclude "node_modules/" \
+            ./ "$HOST_USER@$HOST_IP:/home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/"
+
+      - name: Run post-deploy script
+        env:
+          HOST_PASS: ${{ secrets.HOST_PASS }}
+          HOST_IP: ${{ secrets.HOST_IP }}
+          HOST_USER: ${{ secrets.HOST_USER }}
+          HOST_PORT: ${{ secrets.HOST_PORT }}
+        run: |
+          sshpass -p "$HOST_PASS" ssh -o StrictHostKeyChecking=no -p $HOST_PORT "$HOST_USER@$HOST_IP" << 'EOF'
             cd /home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/
-            # Use the appropriate env file for Docker Compose
             if [ "${{ steps.envdetermine.outputs.env }}" = "production" ]; then 
-              cp .env.production .env; 
+              cp .env.production .env
             else 
-              cp .env.staging .env; 
+              cp .env.staging .env
             fi
-            docker-compose up -d --build   # build and run the container
+            docker-compose up -d --build
+          EOF
