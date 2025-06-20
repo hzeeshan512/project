@@ -1,55 +1,26 @@
-name: CD - Deploy to Server (Staging & Production)
+name: Test SSH Connection
 
 on:
-  push:
-    branches:
-      - "main"
-      - "develop"
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  test-ssh:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Determine environment
-        id: envdetermine
-        run: |
-          if [ "${GITHUB_REF##*/}" = "main" ]; then 
-            echo "env=production" >> $GITHUB_OUTPUT
-          else 
-            echo "env=staging" >> $GITHUB_OUTPUT
-          fi
-
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Deploy via rsync with password
+      - name: Test SSH connection with password
         env:
           HOST_PASS: ${{ secrets.HOST_PASS }}
           HOST_IP: ${{ secrets.HOST_IP }}
           HOST_USER: ${{ secrets.HOST_USER }}
           HOST_PORT: ${{ secrets.HOST_PORT }}
         run: |
-          sshpass -p "$HOST_PASS" rsync -avz -e "ssh -o StrictHostKeyChecking=no -p $HOST_PORT" \
-            --exclude ".git/" --exclude "node_modules/" \
-            ./ "$HOST_USER@$HOST_IP:/home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/"
-
-      - name: Run post-deploy script
-        env:
-          HOST_PASS: ${{ secrets.HOST_PASS }}
-          HOST_IP: ${{ secrets.HOST_IP }}
-          HOST_USER: ${{ secrets.HOST_USER }}
-          HOST_PORT: ${{ secrets.HOST_PORT }}
-        run: |
-          sshpass -p "$HOST_PASS" ssh -o StrictHostKeyChecking=no -p $HOST_PORT "$HOST_USER@$HOST_IP" << 'EOF'
-            cd /home/ubuntu/myapp-${{ steps.envdetermine.outputs.env }}/
-            if [ "${{ steps.envdetermine.outputs.env }}" = "production" ]; then 
-              cp .env.production .env
-            else 
-              cp .env.staging .env
-            fi
-            docker-compose up -d --build
-          EOF
+          sshpass -p "$HOST_PASS" ssh \
+            -o StrictHostKeyChecking=no \
+            -o PreferredAuthentications=password \
+            -o PubkeyAuthentication=no \
+            -p $HOST_PORT "$HOST_USER@$HOST_IP" \
+            "echo '✅ SSH connection successful!'"
