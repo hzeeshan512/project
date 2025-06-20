@@ -1,7 +1,9 @@
 name: Test SSH Connection
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   test-ssh:
@@ -18,6 +20,7 @@ jobs:
           HOST_USER: ${{ secrets.HOST_USER }}
           HOST_PORT: ${{ secrets.HOST_PORT }}
         run: |
+          echo "Attempting SSH connection to $HOST_USER@$HOST_IP..."
           sshpass -p "$HOST_PASS" ssh \
             -o StrictHostKeyChecking=no \
             -o PreferredAuthentications=password \
