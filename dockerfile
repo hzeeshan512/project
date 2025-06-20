@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy and install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install
 
 # Copy the rest of the application code
 COPY . .
