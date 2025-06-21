@@ -1,4 +1,4 @@
-name: Test SSH Connection
+name: Test SSH Password Connection
 
 on:
   push:
@@ -13,17 +13,28 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Test SSH connection with password
+      - name: Print connection details
         env:
           HOST_PASS: ${{ secrets.HOST_PASS }}
           HOST_IP: ${{ secrets.HOST_IP }}
           HOST_USER: ${{ secrets.HOST_USER }}
-          HOST_PORT: ${{ secrets.HOST_PORT }}
         run: |
-          echo "Attempting SSH connection to $HOST_USER@$HOST_IP..."
-          sshpass -p "$HOST_PASS" ssh \
-            -o StrictHostKeyChecking=no \
+          echo "🔍 Attempting SSH login to $HOST_USER@$HOST_IP on port 22..."
+
+      - name: Show GitHub runner public IP
+        run: |
+          echo "🌍 GitHub runner public IP:"
+          curl ifconfig.me || curl https://ifconfig.co
+
+      - name: SSH password connection test (debug mode)
+        env:
+          HOST_PASS: ${{ secrets.HOST_PASS }}
+          HOST_IP: ${{ secrets.HOST_IP }}
+          HOST_USER: ${{ secrets.HOST_USER }}
+        run: |
+          sshpass -p "$HOST_PASS" ssh -vvv \
             -o PreferredAuthentications=password \
             -o PubkeyAuthentication=no \
-            -p $HOST_PORT "$HOST_USER@$HOST_IP" \
-            "echo '✅ SSH connection successful!'"
+            -o StrictHostKeyChecking=no \
+            "$HOST_USER@$HOST_IP" \
+            "echo '✅ SSH connection successful from GitHub Actions!'"
